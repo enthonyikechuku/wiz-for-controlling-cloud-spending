@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SpendGraph: cloud spend, mapped</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f4fa;--panel:#fff;--line:#dfe2f0;--tx:#161a33;--mut:#5d6585;--acc:#4553e8;--hot:#d92f55;--ok:#0e9f78;--warn:#b57a00;--soft:#eceefa;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1020;--panel:#151a2e;--line:#252c47;--tx:#e7e9f5;--mut:#8a92b5;--acc:#8b98ff;--hot:#ff6b8b;--ok:#3ddbb0;--warn:#ffc857;--soft:#1c2340;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1020;--panel:#151a2e;--line:#252c47;--tx:#e7e9f5;--mut:#8a92b5;--acc:#8b98ff;--hot:#ff6b8b;--ok:#3ddbb0;--warn:#ffc857;--soft:#1c2340;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 Figtree,system-ui,sans-serif}
+h1,h2,h3,.num{font-family:"Bricolage Grotesque",Figtree,system-ui,sans-serif;letter-spacing:-.01em;margin:0}
+.app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+nav{border-right:1px solid var(--line);padding:20px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.logo{display:flex;align-items:center;gap:10px;padding:0 10px 18px;font:700 19px "Bricolage Grotesque",sans-serif}
+.logo i{width:22px;height:22px;border-radius:50%;border:2px solid var(--acc);position:relative}
+.logo i:after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--hot)}
+nav a{display:flex;justify-content:space-between;padding:9px 12px;border-radius:8px;color:var(--mut);text-decoration:none;font-weight:500;cursor:pointer}
+nav a:hover{background:var(--soft)}
+nav a.on{background:var(--soft);color:var(--tx)}
+nav a b{font-weight:600;color:var(--hot);font-size:13px}
+.theme{margin-top:auto;background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:8px;cursor:pointer;font:inherit}
+main{padding:24px 28px 48px;max-width:1180px;width:100%}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.top h1{font-size:28px}.top p{margin:2px 0 0;color:var(--mut)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--mut);padding:5px 12px;border-radius:99px;font:500 13px Figtree,sans-serif;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+:root:not([data-theme="light"]) .chip.on{color:#0d1020}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(4,1fr);margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{font-size:16px;margin-bottom:10px}
+.kpi small{color:var(--mut);font-size:13px}
+.kpi .num{font-size:30px;font-weight:700;display:block;margin:2px 0}
+.up{color:var(--hot)}.dn{color:var(--ok)}
+.cols{grid-template-columns:2fr 1fr;margin-bottom:14px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .t{flex:1;min-width:0}.row .t div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t span{color:var(--mut);font-size:13px}
+.amt{font:700 16px "Bricolage Grotesque",sans-serif;white-space:nowrap}
+.tag{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--mut);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.bar{height:8px;border-radius:4px;background:var(--soft);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--acc)}
+.scroll{overflow-x:auto}
+.issue{cursor:pointer}.issue:hover{background:var(--soft)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(400px,100%);background:var(--panel);border-left:1px solid var(--line);padding:calc(24px + env(safe-area-inset-top,0px)) 24px 24px;transform:translateX(100%);transition:transform .25s;z-index:20;overflow-y:auto}
+.drawer.open{transform:none}
+.drawer h2{font-size:21px;margin:10px 0}
+.drawer dl{margin:16px 0;display:grid;grid-template-columns:90px 1fr;gap:8px;font-size:14px}
+.drawer dt{color:var(--mut)}.drawer dd{margin:0}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:9px 16px;font:600 14px Figtree,sans-serif;cursor:pointer}
+:root:not([data-theme="light"]) .btn{color:#0d1020}
+.btn.ghost{background:none;color:var(--mut);border:1px solid var(--line)}
+.btn[disabled]{background:var(--soft);color:var(--ok);cursor:default}
+button:focus-visible,a:focus-visible,.chip:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#graph{width:100%;height:auto;display:block}
+#graph g{cursor:pointer}
+#graph text{fill:var(--tx);font:500 12px Figtree,sans-serif;pointer-events:none}
+.view{display:none}.view.on{display:block}
+@media (max-width:860px){
+.app{grid-template-columns:1fr}
+nav{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:12px;border:0;border-bottom:1px solid var(--line)}
+.logo{padding:0 10px 0 4px}nav a{white-space:nowrap;gap:6px}.theme{margin:0 0 0 auto}
+.kpis{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}main{padding:18px 16px 40px}}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav>
+ <div class="logo"><i></i>SpendGraph</div>
+ <a data-v="overview">Overview</a>
+ <a data-v="issues">Issues <b id="ic"></b></a>
+ <a data-v="graph">Cost graph</a>
+ <a data-v="budgets">Budgets</a>
+ <a data-v="savings">Savings</a>
+ <button class="theme" id="th">Switch theme</button>
+</nav>
+<main>
+ <section class="view" id="overview">
+  <div class="top"><div><h1>Cloud spend overview</h1><p>3 clouds, 14 accounts, read-only connection. Updated 4 minutes ago.</p></div></div>
+  <div class="grid kpis" id="kpis"></div>
+  <div class="grid cols">
+   <div class="card"><h3>Daily spend, October</h3><svg id="trend" viewBox="0 0 640 230" width="100%"></svg></div>
+   <div class="card"><h3>Spend by cloud</h3><div id="byCloud"></div></div>
+  </div>
+  <div class="card"><h3>Biggest leaks right now</h3><div id="topIssues"></div></div>
+ </section>
+
+ <section class="view" id="issues">
+  <div class="top"><div><h1>Issues</h1><p>Waste and spikes, ranked by monthly dollars.</p></div><div class="chips" id="filters"></div></div>
+  <div class="card scroll"><div id="issueList"></div></div>
+ </section>
+
+ <section class="view" id="graph">
+  <div class="top"><div><h1>Cost graph</h1><p>Node size is monthly cost. Red rings have open issues. Click a node.</p></div></div>
+  <div class="grid cols">
+   <div class="card"><svg id="graph" viewBox="0 0 700 460"></svg></div>
+   <div class="card" id="nodeInfo"></div>
+  </div>
+ </section>
+
+ <section class="view" id="budgets">
+  <div class="top"><div><h1>Budgets</h1><p>Team budgets and where each one is heading by month end.</p></div></div>
+  <div class="grid" id="budgetList"></div>
+ </section>
+
+ <section class="view" id="savings">
+  <div class="top"><div><h1>Savings</h1><p>Changes that cut spend without touching performance.</p></div></div>
+  <div class="card kpi" style="margin-bottom:14px"><small>Queued savings</small><span class="num dn" id="queued">$0</span><small id="queuedSub"></small></div>
+  <div class="grid" id="saveList" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"></div>
+ </section>
+</main>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Issue detail"></aside>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+const CL={AWS:'#ff9f43',Azure:'#4aa8ff',GCP:'#3ddbb0'};
+const issues=[
+{id:1,t:'12 idle GPU instances',c:'AWS',ty:'Idle',a:'ml-research',r:'p4d.24xlarge × 12',$:18400,why:'CPU and GPU under 2% for 21 days. No jobs scheduled.',fix:'Stop the instances or move to a spot pool that scales to zero.'},
+{id:2,t:'Data transfer spike from us-east-1',c:'AWS',ty:'Spike',a:'prod-core',r:'NAT gateway nat-0a41',$:9700,why:'Egress is 4.1× the 30-day average since Oct 21.',fix:'Add VPC endpoints for S3 and DynamoDB to skip the NAT gateway.'},
+{id:3,t:'Oversized production database',c:'Azure',ty:'Oversized',a:'billing-prod',r:'SQL Business Critical 32 vCore',$:6200,why:'Peak CPU is 18% and peak memory is 31% over 60 days.',fix:'Resize to 16 vCore. Expect no change in query latency.'},
+{id:4,t:'Unused Savings Plan hours',c:'AWS',ty:'Commitment',a:'org-root',r:'Compute Savings Plan',$:5100,why:'Only 71% of committed hours were used this month.',fix:'Move steady workloads onto covered instance families.'},
+{id:5,t:'340 unattached disks',c:'Azure',ty:'Orphaned',a:'dev-sandbox',r:'Managed disks, 28 TB total',$:3900,why:'Not attached to any VM for over 45 days.',fix:'Snapshot the disks you might need, then delete the rest.'},
+{id:6,t:'BigQuery full-table scans',c:'GCP',ty:'Spike',a:'analytics',r:'Dataset events_raw',$:3400,why:'Three scheduled queries scan 22 TB each day without partition filters.',fix:'Partition by event date and filter by date range in each query.'},
+{id:7,t:'Dev clusters running overnight',c:'GCP',ty:'Idle',a:'platform-dev',r:'GKE clusters × 4',$:2800,why:'Zero traffic between 8 pm and 7 am on every day for 30 days.',fix:'Add a schedule that scales node pools to zero overnight and at weekends.'},
+{id:8,t:'Old snapshots, no owner tag',c:'AWS',ty:'Orphaned',a:'prod-core',r:'EBS snapshots × 1,900',$:1600,why:'Older than 18 months with no source volume and no owner tag.',fix:'Apply a retention policy of 90 days and tag owners.'},
+{id:9,t:'Unassociated public IPs',c:'Azure',ty:'Orphaned',a:'dev-sandbox',r:'Public IPs × 64',$:310,why:'Billed hourly and not linked to any resource.',fix:'Release the addresses.'}];
+const kinds=['All','Idle','Spike','Oversized','Orphaned','Commitment'];
+const days=[...Array(29)].map((_,i)=>{let b=5200+Math.sin(i/2.3)*380+i*22;if(i==11)b+=2100;if(i>=20)b+=1700;return Math.round(b)});
+const mtd=days.reduce((a,b)=>a+b,0),fc=mtd+2*6600;
+const budgets=[['Machine learning',62000,58300,71200],['Core platform',48000,34900,41800],['Analytics',22000,19400,24600],['Billing',15000,9800,11900],['Dev and sandbox',12000,8100,9300]];
+const saves=[
+{t:'Right-size 8 databases',d:'Move over-provisioned Azure and AWS databases down one tier.',$:7400,risk:'Low'},
+{t:'Schedule non-prod shutdowns',d:'Stop dev and staging between 8 pm and 7 am, and at weekends.',$:5900,risk:'Low'},
+{t:'Buy a 1-year Savings Plan',d:'Cover the steady 62% of compute that has run every day for 90 days.',$:11200,risk:'Medium'},
+{t:'Delete orphaned storage',d:'Remove unattached disks, snapshots and IPs older than 45 days.',$:5800,risk:'Low'},
+{t:'Switch batch jobs to spot',d:'Run fault-tolerant training and ETL on spot capacity.',$:8600,risk:'Medium'},
+{t:'Move cold data to archive tiers',d:'Shift objects not read for 120 days into archive storage.',$:2300,risk:'Low'}];
+const queued=new Set();
+const tree=[{n:'AWS',c:'AWS',$:84200,k:[['Compute',41000,3],['Data transfer',15200,1],['Storage',11900,2],['Databases',16100,1]]},
+{n:'Azure',c:'Azure',$:52800,k:[['Virtual machines',21400,0],['SQL databases',17200,1],['Storage',9800,2],['Networking',4400,1]]},
+{n:'GCP',c:'GCP',$:47400,k:[['BigQuery',19800,1],['GKE',17900,1],['Cloud Storage',6100,0],['Other',3600,0]]}];
+
+function kpi(l,v,s,c){return `<div class="card kpi"><small>${l}</small><span class="num ${c||''}">${v}</span><small>${s}</small></div>`}
+function overview(){
+ const waste=issues.reduce((a,b)=>a+b.$,0);
+ $('#kpis').innerHTML=kpi('Month to date',money(mtd),'<span class="up">+6.2%</span> vs last October')+kpi('Forecast for October',money(fc),'Budget is '+money(160000))+kpi('Waste found',money(waste),'per month, across '+issues.length+' issues','up')+kpi('Savings queued',money([...queued].reduce((a,i)=>a+saves[i].$,0)),'of '+money(saves.reduce((a,b)=>a+b.$,0))+' available','dn');
+ const W=640,H=230,p=34,max=9500,x=i=>p+i*(W-p-10)/30,y=v=>H-26-(v/max)*(H-46);
+ let s='';[0,3000,6000,9000].forEach(v=>s+=`<line x1="${p}" x2="${W-10}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${p-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--mut)">${v/1000}k</text>`);
+ s+=`<path d="${days.map((v,i)=>(i?'L':'M')+x(i)+','+y(v)).join('')}L${x(28)},${H-26}L${x(0)},${H-26}Z" fill="var(--acc)" opacity=".12"/>`;
+ s+=`<path d="${days.map((v,i)=>(i?'L':'M')+x(i)+','+y(v)).join('')}" fill="none" stroke="var(--acc)" stroke-width="2.4"/>`;
+ s+=`<path d="M${x(28)},${y(days[28])}L${x(29)},${y(6600)}L${x(30)},${y(6600)}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-dasharray="4 4"/>`;
+ [[11,'Transfer spike'],[20,'GPU fleet added']].forEach(([i,l])=>s+=`<circle cx="${x(i)}" cy="${y(days[i])}" r="5" fill="var(--hot)"/><text x="${x(i)+8}" y="${y(days[i])-8}" font-size="11" fill="var(--hot)">${l}</text>`);
+ [1,8,15,22,29].forEach(d=>s+=`<text x="${x(d-1)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--mut)">Oct ${d}</text>`);
+ $('#trend').innerHTML=s;
+ const tot=tree.reduce((a,b)=>a+b.$,0);
+ $('#byCloud').innerHTML=tree.map(t=>`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between"><span><span class="dot" style="background:${CL[t.c]};display:inline-block"></span> ${t.n}</span><span class="amt">${money(t.$)}</span></div><div class="bar"><i style="width:${t.$/tot*100}%;background:${CL[t.c]}"></i></div></div>`).join('');
+ $('#topIssues').innerHTML=issues.slice(0,4).map(rowHtml).join('');bindRows();
+}
+function rowHtml(i){return `<div class="row issue" data-id="${i.id}" tabindex="0"><span class="dot" style="background:${CL[i.c]}"></span><div class="t"><div>${i.t}</div><span>${i.c} · ${i.a} · ${i.r}</span></div><span class="tag">${i.ty}</span><span class="amt">${money(i.$)}/mo</span></div>`}
+let flt='All';
+function issueView(){
+ $('#filters').innerHTML=kinds.map(k=>`<button class="chip ${k==flt?'on':''}" data-k="${k}">${k}</button>`).join('');
+ $$('#filters .chip').forEach(b=>b.onclick=()=>{flt=b.dataset.k;issueView()});
+ const l=issues.filter(i=>flt=='All'||i.ty==flt);
+ $('#issueList').innerHTML=l.length?l.map(rowHtml).join(''):'<p style="color:var(--mut)">No issues of this type. Pick another filter.</p>';bindRows();
+}
+function bindRows(){$$('.issue').forEach(r=>{const f=()=>openDrawer(+r.dataset.id);r.onclick=f;r.onkeydown=e=>{if(e.key=='Enter')f()}})}
+function openDrawer(id){const i=issues.find(x=>x.id==id),d=$('#drawer');
+ d.innerHTML=`<button class="btn ghost" id="cl">Close</button><h2>${i.t}</h2><div class="amt" style="font-size:26px;color:var(--hot)">${money(i.$)}<span style="font-size:14px;color:var(--mut)"> per month</span></div>
+ <dl><dt>Cloud</dt><dd>${i.c}</dd><dt>Account</dt><dd>${i.a}</dd><dt>Resource</dt><dd>${i.r}</dd><dt>Type</dt><dd>${i.ty}</dd></dl>
+ <h3>Why it’s flagged</h3><p>${i.why}</p><h3>How to fix it</h3><p>${i.fix}</p><button class="btn" id="asg">Assign to owner</button>`;
+ d.classList.add('open');$('#cl').onclick=()=>d.classList.remove('open');
+ $('#asg').onclick=e=>{e.target.textContent='Assigned to '+i.a+' team';e.target.disabled=true}}
+function graphView(){
+ const cx=[350,130,570],cy=[110,330,330];let s='';const nodes=[];
+ tree.forEach((t,a)=>{t.k.forEach((k,j)=>{const ang=(j/t.k.length)*Math.PI*2+a;const px=cx[a]+Math.cos(ang)*(a?95:110),py=cy[a]+Math.sin(ang)*(a?90:78);nodes.push({t,k,px,py,a})})});
+ [[0,1],[0,2],[1,2]].forEach(([p,q])=>s+=`<line x1="${cx[p]}" y1="${cy[p]}" x2="${cx[q]}" y2="${cy[q]}" stroke="var(--line)" stroke-dasharray="3 5"/>`);
+ nodes.forEach(n=>s+=`<line x1="${cx[n.a]}" y1="${cy[n.a]}" x2="${n.px}" y2="${n.py}" stroke="var(--line)"/>`);
+ nodes.forEach((n,i)=>{const r=8+Math.sqrt(n.k[1])/9;s+=`<g data-n="${i}"><circle cx="${n.px}" cy="${n.py}" r="${r}" fill="${CL[n.t.c]}" opacity=".85"/>${n.k[2]?`<circle cx="${n.px}" cy="${n.py}" r="${r+4}" fill="none" stroke="var(--hot)" stroke-width="2"/>`:''}<text x="${n.px}" y="${n.py+r+16}" text-anchor="middle">${n.k[0]}</text></g>`});
+ tree.forEach((t,a)=>{const r=24+Math.sqrt(t.$)/8;s+=`<g data-c="${a}"><circle cx="${cx[a]}" cy="${cy[a]}" r="${r}" fill="var(--panel)" stroke="${CL[t.c]}" stroke-width="3"/><text x="${cx[a]}" y="${cy[a]+4}" text-anchor="middle" style="font-weight:600">${t.n}</text></g>`});
+ $('#graph').innerHTML=s;
+ const show=h=>$('#nodeInfo').innerHTML=h;
+ const base='<h3>Pick a node</h3><p style="color:var(--mut)">Select a cloud or a service to see its cost and open issues.</p>';show(base);
+ $$('#graph g').forEach(g=>g.onclick=()=>{
+  if(g.dataset.c!==undefined){const t=tree[g.dataset.c];const n=issues.filter(i=>i.c==t.c);show(`<h3>${t.n}</h3><div class="amt" style="font-size:26px">${money(t.$)}</div><p style="color:var(--mut)">per month across ${t.k.length} services.</p><p>${n.length} open issues worth ${money(n.reduce((a,b)=>a+b.$,0))} a month.</p><button class="btn" onclick="flt='All';go('issues')">View issues</button>`)}
+  else{const n=nodes[g.dataset.n];show(`<h3>${n.k[0]}</h3><p style="color:var(--mut)">${n.t.n}</p><div class="amt" style="font-size:26px">${money(n.k[1])}</div><p>${n.k[2]?n.k[2]+' open issue'+(n.k[2]>1?'s':'')+' on this service.':'No open issues. This service looks healthy.'}</p>`)}})}
+function budgetView(){$('#budgetList').innerHTML=budgets.map(([n,b,sp,pr])=>{const over=pr>b;return `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h3>${n}</h3><span class="tag" style="${over?'color:var(--hot)':'color:var(--ok)'}">${over?'Over by '+money(pr-b)+' at this pace':'On track'}</span></div><div style="color:var(--mut);font-size:14px">${money(sp)} spent of ${money(b)}. Projected ${money(pr)}.</div><div class="bar" style="height:10px"><i style="width:${Math.min(sp/b*100,100)}%;background:${over?'var(--hot)':'var(--ok)'}"></i></div></div>`}).join('')}
+function saveView(){const q=[...queued].reduce((a,i)=>a+saves[i].$,0);$('#queued').textContent=money(q)+'/mo';$('#queuedSub').textContent=queued.size?money(q*12)+' a year from '+queued.size+' change'+(queued.size>1?'s':''):'Queue a change below to see the total.';
+ $('#saveList').innerHTML=saves.map((s,i)=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><h3>${s.t}</h3><span class="tag">${s.risk} risk</span></div><p style="color:var(--mut);margin:0 0 12px">${s.d}</p><div style="display:flex;justify-content:space-between;align-items:center"><span class="amt dn">${money(s.$)}/mo</span><button class="btn" data-i="${i}" ${queued.has(i)?'disabled':''}>${queued.has(i)?'Queued':'Queue change'}</button></div></div>`).join('');
+ $$('#saveList .btn').forEach(b=>b.onclick=()=>{queued.add(+b.dataset.i);saveView()})}
+const R={overview,issues:issueView,graph:graphView,budgets:budgetView,savings:saveView};
+function go(v){if(!R[v])v='overview';$$('.view').forEach(e=>e.classList.toggle('on',e.id==v));$$('nav a').forEach(a=>a.classList.toggle('on',a.dataset.v==v));$('#drawer').classList.remove('open');R[v]();if(location.hash!=='#'+v)history.replaceState(null,'','#'+v)}
+$$('nav a').forEach(a=>{a.tabIndex=0;a.onclick=()=>go(a.dataset.v);a.onkeydown=e=>{if(e.key=='Enter')go(a.dataset.v)}});
+$('#ic').textContent=issues.length;
+$('#th').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme=='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark'};
+addEventListener('hashchange',()=>go(location.hash.slice(1)));
+go(location.hash.slice(1));
+</script>
+</body>
+</html>
